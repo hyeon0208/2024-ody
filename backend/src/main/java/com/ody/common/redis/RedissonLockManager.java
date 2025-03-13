@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Slf4j
@@ -20,17 +22,22 @@ public class RedissonLockManager {
     private final TransactionTemplate transactionTemplate;
 
     public <T> T lock(Supplier<T> supplier, String lockName, DistributedLock distributedLock) {
-        RLock rLock = redissonClient.getLock(lockName);
+        RLock rLock = redissonClient.getLock(lockName); // lockName으로 분산 락 객체를 생성
         log.debug("[분산락 시작] {} 획득 시도", lockName);
 
         try {
             acquireLock(rLock, lockName, distributedLock);
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    releaseLock(rLock, lockName);
+                    log.debug("[트랜잭션 완료 후 분산락 해제] {}", lockName);
+                }
+            });
             return executeWithTransaction(supplier);
         } catch (InterruptedException exception) {
             log.error("[분산락 오류] {} 획득 중 인터럽트 발생", lockName, exception);
             throw new OdyServerErrorException("서버에 장애가 발생했습니다.");
-        } finally {
-            releaseLock(rLock, lockName);
         }
     }
 

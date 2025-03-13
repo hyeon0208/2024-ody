@@ -17,7 +17,6 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 
 @Slf4j
-@Order(Ordered.HIGHEST_PRECEDENCE + 1)
 @Aspect
 @Component
 @RequiredArgsConstructor
