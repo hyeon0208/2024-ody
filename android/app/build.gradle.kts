@@ -31,9 +31,14 @@ android {
         buildConfigField("String", "BASE_PROD_URL", properties["BASE_PROD_URL"].toString())
         buildConfigField("String", "KAKAO_API_KEY", properties["KAKAO_API_KEY"].toString())
         buildConfigField("String", "KAKAO_NATIVE_KEY", properties["KAKAO_NATIVE_KEY"].toString())
-        buildConfigField("String", "PRIVACY_POLICY_URI", properties["PRIVACY_POLICY_URI"].toString())
+        buildConfigField(
+            "String",
+            "PRIVACY_POLICY_URI",
+            properties["PRIVACY_POLICY_URI"].toString(),
+        )
         buildConfigField("String", "TERM_URI", properties["TERM_URI"].toString())
-        manifestPlaceholders["KAKAO_NATIVE_KEY"] = properties["KAKAO_NATIVE_KEY"].toString().trim('"')
+        manifestPlaceholders["KAKAO_NATIVE_KEY"] =
+            properties["KAKAO_NATIVE_KEY"].toString().trim('"')
     }
     buildTypes {
         debug {
@@ -60,10 +65,14 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.13"
+    }
     buildFeatures {
         buildConfig = true
         dataBinding = true
         viewBinding = true
+        compose = true
     }
     testOptions {
         unitTests.isReturnDefaultValues = true
@@ -78,12 +87,10 @@ dependencies {
     // androidx
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity)
-    implementation(libs.androidx.hilt.work)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle)
     implementation(libs.androidx.view.pager)
     implementation(libs.androidx.fragment.ktx)
-    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.viewmodel)
@@ -130,8 +137,8 @@ dependencies {
     // timber
     implementation(libs.timber)
 
-    // dotsibdicator
-    implementation(libs.dotsibdicator)
+    // dotsindicator
+    implementation(libs.dotsindicator)
 
     // play service
     implementation(libs.play.services.location)
@@ -149,7 +156,20 @@ dependencies {
     // kakao sdk
     implementation(libs.kakao.sdk.v2.user)
 
+    // compose
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.material3)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.tooling.preview)
+
     // hilt
     implementation(libs.hilt.android)
+    implementation(libs.hilt.navigation.compose)
     kapt(libs.hilt.android.compiler)
+
+    // paging
+    implementation(libs.androidx.paging)
 }

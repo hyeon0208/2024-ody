@@ -8,10 +8,15 @@ import com.ody.notification.domain.FcmTopic;
 import com.ody.notification.domain.Notification;
 import com.ody.notification.domain.NotificationStatus;
 import com.ody.notification.domain.NotificationType;
-import com.ody.notification.domain.message.DirectMessage;
+import com.ody.notification.domain.message.GroupMessage;
+import com.ody.notification.domain.types.Nudge;
 import com.ody.notification.dto.response.NotiLogFindResponses;
 import com.ody.notification.repository.NotificationRepository;
-import com.ody.route.domain.DepartureTime;
+import com.ody.notification.service.event.NoticeEvent;
+import com.ody.notification.service.event.NudgeEvent;
+import com.ody.notification.service.event.PushEvent;
+import com.ody.notification.service.event.SubscribeEvent;
+import com.ody.notification.service.event.UnSubscribeEvent;
 import com.ody.util.InstantConverter;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -31,51 +36,48 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
-    private final FcmSubscriber fcmSubscriber;
-    private final FcmPushSender fcmPushSender;
+    private final FcmEventPublisher fcmEventPublisher;
     private final TaskScheduler taskScheduler;
 
     @Transactional
-    public void saveAndSendNotifications(Meeting meeting, Mate mate, DeviceToken deviceToken) {
-        FcmTopic fcmTopic = new FcmTopic(meeting);
-        saveAndSendEntryNotification(mate, fcmTopic);
-        fcmSubscriber.subscribeTopic(fcmTopic, deviceToken);
-        saveAndSendDepartureReminderNotification(meeting, mate, fcmTopic);
-    }
-
-    private void saveAndSendEntryNotification(Mate mate, FcmTopic fcmTopic) {
-        Notification notification = Notification.createEntry(mate, fcmTopic);
-        saveAndSendNotification(notification);
-    }
-
-    private void saveAndSendDepartureReminderNotification(Meeting meeting, Mate mate, FcmTopic fcmTopic) {
-        DepartureTime departureTime = new DepartureTime(meeting, mate.getEstimatedMinutes());
-        LocalDateTime sendAt = calculateSendAt(departureTime);
-        Notification notification = Notification.createDepartureReminder(mate, sendAt, fcmTopic);
-        saveAndSendNotification(notification);
-    }
-
-    private LocalDateTime calculateSendAt(DepartureTime departureTime) {
-        if (departureTime.isBefore(LocalDateTime.now())) {
-            return LocalDateTime.now();
-        }
-        return departureTime.getValue();
-    }
-
-    private void saveAndSendNotification(Notification notification) {
-        Notification savedNotification = notificationRepository.save(notification);
+    public void saveAndSchedule(Notification notification) {
+        Notification savedNotification = save(notification);
         scheduleNotification(savedNotification);
     }
 
-    public void scheduleNotification(Notification notification) {
+    @Transactional
+    public Notification save(Notification notification) {
+        return notificationRepository.save(notification);
+    }
+
+    private void scheduleNotification(Notification notification) {
         Instant startTime = InstantConverter.kstToInstant(notification.getSendAt());
-        taskScheduler.schedule(() -> fcmPushSender.sendPushNotification(notification), startTime);
+        PushEvent pushEvent = new PushEvent(this, notification);
+        taskScheduler.schedule(() -> fcmEventPublisher.publishWithTransaction(pushEvent), startTime);
         log.info(
                 "{} 타입 {} 상태 알림 {}에 스케줄링 예약",
                 notification.getType(),
                 notification.getStatus(),
                 InstantConverter.instantToKst(startTime)
         );
+    }
+
+    public void subscribeTopic(DeviceToken deviceToken, FcmTopic fcmTopic){
+        SubscribeEvent subscribeEvent = new SubscribeEvent(this, deviceToken, fcmTopic);
+        fcmEventPublisher.publish(subscribeEvent);
+    }
+
+    @Transactional
+    public void sendNudgeMessage(Mate requestMate, Nudge nudge) {
+        Notification nudgeNotification = notificationRepository.save(nudge.toNotification());
+        NudgeEvent nudgeEvent = new NudgeEvent(this, requestMate, nudgeNotification);
+        fcmEventPublisher.publishWithTransaction(nudgeEvent);
+    }
+
+    public void scheduleNotice(GroupMessage groupMessage, LocalDateTime noticeTime) {
+        Instant startTime = InstantConverter.kstToInstant(noticeTime);
+        NoticeEvent noticeEvent = new NoticeEvent(this, groupMessage);
+        taskScheduler.schedule(() -> fcmEventPublisher.publish(noticeEvent), startTime);
     }
 
     @Transactional
@@ -99,41 +101,21 @@ public class NotificationService {
     }
 
     @Transactional
-    public void sendNudgeMessage(Mate requestMate, Mate nudgedMate) {
-        Notification nudgeNotification = notificationRepository.save(Notification.createNudge(nudgedMate));
-        fcmPushSender.sendNudgeMessage(
-                nudgeNotification,
-                DirectMessage.createMessageToOther(requestMate, nudgeNotification)
-        );
-    }
-
-    @Transactional
     public void updateAllStatusToDismissByMateIdAndSendAtAfterNow(long mateId) {
         notificationRepository.updateAllStatusToDismissedByMateIdAndSendAtAfterDateTime(mateId, LocalDateTime.now());
     }
 
-    @Transactional
-    public void saveMemberDeletionNotification(Mate mate) {
-        Notification notification = Notification.createMemberDeletion(mate);
-        notificationRepository.save(notification);
-    }
-
-    @Transactional
-    public void saveMateLeaveNotification(Mate mate) {
-        Notification notification = Notification.createMateLeave(mate);
-        notificationRepository.save(notification);
-    }
-
     public void unSubscribeTopic(Meeting meeting, DeviceToken deviceToken) {
         FcmTopic fcmTopic = new FcmTopic(meeting);
-        fcmSubscriber.unSubscribeTopic(fcmTopic, deviceToken);
+        UnSubscribeEvent unSubscribeEvent = new UnSubscribeEvent(this, deviceToken, fcmTopic);
+        fcmEventPublisher.publish(unSubscribeEvent);
     }
 
     public void unSubscribeTopic(List<Meeting> meetings) {
         for (Meeting meeting : meetings) {
             notificationRepository.findAllMeetingIdAndType(meeting.getId(), NotificationType.DEPARTURE_REMINDER)
-                    .forEach(notification -> fcmSubscriber.unSubscribeTopic(
-                                    notification.getFcmTopic(),
+                    .forEach(notification -> unSubscribeTopic(
+                                    meeting,
                                     notification.getMate().getMember().getDeviceToken()
                             )
                     );

@@ -3,7 +3,6 @@ package com.ody.notification.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 
-import com.ody.auth.service.KakaoAuthUnlinkClient;
 import com.ody.common.BaseServiceTest;
 import com.ody.mate.domain.Mate;
 import com.ody.meeting.domain.Meeting;
@@ -12,9 +11,11 @@ import com.ody.member.service.MemberService;
 import com.ody.notification.domain.Notification;
 import com.ody.notification.domain.NotificationStatus;
 import com.ody.notification.domain.NotificationType;
+import com.ody.notification.domain.types.Nudge;
 import com.ody.notification.dto.response.NotiLogFindResponse;
-import com.ody.notification.dto.response.NotiLogFindResponses;
 import com.ody.notification.repository.NotificationRepository;
+import com.ody.notification.service.event.NudgeEvent;
+import com.ody.notification.service.event.UnSubscribeEvent;
 import com.ody.route.service.RouteService;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -38,35 +39,11 @@ class NotificationServiceTest extends BaseServiceTest {
     @MockBean
     private TaskScheduler taskScheduler;
 
-    @MockBean
-    protected FcmPushSender fcmPushSender;
-
     @Autowired
     private NotificationRepository notificationRepository;
 
     @Autowired
     private MemberService memberService;
-
-    @MockBean
-    private KakaoAuthUnlinkClient kakaoAuthUnlinkClient;
-
-    @DisplayName("출발 알림 생성 시점이 알림 전송 시점보다 늦은 경우 즉시 전송된다")
-    @Test
-    void sendImmediatelyIfDepartureTimeIsPast() {
-        Member member = fixtureGenerator.generateMember();
-        Meeting savedPastMeeting = fixtureGenerator.generateMeeting(LocalDateTime.now().minusDays(1));
-        Mate mate = fixtureGenerator.generateMate(savedPastMeeting, member); // 소요 시간 : 10분
-
-        LocalDateTime expect = LocalDateTime.now();
-        notificationService.saveAndSendNotifications(savedPastMeeting, mate, member.getDeviceToken());
-
-        Notification departureReminderNotification = notificationRepository.findAll().stream()
-                .filter(Notification::isDepartureReminder)
-                .findAny()
-                .get();
-
-        assertThat(departureReminderNotification.getSendAt()).isEqualToIgnoringNanos(expect);
-    }
 
     @DisplayName("PENDING 상태의 알림들을 TaskScheduler로 스케줄링 한다.")
     @Test
@@ -81,7 +58,7 @@ class NotificationServiceTest extends BaseServiceTest {
                 .schedule(any(Runnable.class), any(Instant.class));
     }
 
-    @DisplayName("모임방에 대한 구독을 취소한다")
+    @DisplayName("모임방에 대한 구독 취소 이벤트가 발행된다")
     @Test
     void unSubscribeTopic() {
         Member member = fixtureGenerator.generateMember();
@@ -96,19 +73,22 @@ class NotificationServiceTest extends BaseServiceTest {
 
         notificationService.unSubscribeTopic(List.of(odyMeeting, sojuMeeting));
 
-        BDDMockito.verify(fcmSubscriber, Mockito.times(2)).unSubscribeTopic(any(), any());
+        assertThat(applicationEvents.stream(UnSubscribeEvent.class))
+                .hasSize(2);
     }
 
-    @DisplayName("재촉하기 메시지가 발송된다")
+    @DisplayName("재촉하기 이벤트가 발행된다")
     @Test
     void sendSendNudgeMessageMessage() {
         Meeting odyMeeting = fixtureGenerator.generateMeeting();
         Mate requestMate = fixtureGenerator.generateMate(odyMeeting);
         Mate nudgedMate = fixtureGenerator.generateMate(odyMeeting);
+        Nudge nudge = new Nudge(nudgedMate);
 
-        notificationService.sendNudgeMessage(requestMate, nudgedMate);
+        notificationService.sendNudgeMessage(requestMate, nudge);
 
-        Mockito.verify(fcmPushSender, Mockito.times(1)).sendNudgeMessage(any(), any());
+        assertThat(applicationEvents.stream(NudgeEvent.class))
+                .hasSize(1);
     }
 
     @DisplayName("특정 참여자의 전송 전 알람을 모두 DISMISSED 상태로 변경한다.")
@@ -129,21 +109,6 @@ class NotificationServiceTest extends BaseServiceTest {
         );
     }
 
-    @DisplayName("참여자의 출발 시간이 현재 시간보다 전이라면 입장 알림 - 출발 알림 순으로 로그 목록이 조회된다.")
-    @Test
-    void findAllMeetingLogsOrderOfEntryAndDepartureNotification() {
-        Member member = fixtureGenerator.generateMember();
-        Meeting savedPastMeeting = fixtureGenerator.generateMeeting(LocalDateTime.now().minusDays(1));
-        Mate mate = fixtureGenerator.generateMate(savedPastMeeting, member); // 소요 시간 : 10분
-
-        notificationService.saveAndSendNotifications(savedPastMeeting, mate, member.getDeviceToken());
-
-        NotiLogFindResponses allMeetingLogs = notificationService.findAllNotiLogs(savedPastMeeting.getId());
-
-        assertThat(allMeetingLogs.notiLog()).extracting(NotiLogFindResponse::type)
-                .containsExactly(NotificationType.ENTRY.name(), NotificationType.DEPARTURE_REMINDER.name());
-    }
-
     @DisplayName("삭제 회원이 포함된 로그 목록을 조회한다.")
     @Test
     void findAllMeetingLogsIncludingDeletedMember() {
@@ -154,7 +119,7 @@ class NotificationServiceTest extends BaseServiceTest {
         fixtureGenerator.generateNotification(mate);
 
         int logCountBeforeDelete = notificationService.findAllNotiLogs(meeting.getId()).notiLog().size();
-        memberService.delete(deleteMate.getMember());
+        memberService.deleteV2(deleteMate.getMember());
         int logCountAfterDelete = notificationService.findAllNotiLogs(meeting.getId()).notiLog().size();
 
         assertThat(logCountAfterDelete).isEqualTo(logCountBeforeDelete + 1);

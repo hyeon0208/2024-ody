@@ -1,62 +1,36 @@
 package com.mulberry.ody.domain.apiresult
 
-fun <T> ApiResult<T>.onSuccess(block: (T) -> Unit): ApiResult<T> {
+import java.lang.IllegalArgumentException
+
+inline fun <T> ApiResult<T>.onSuccess(block: (T) -> Unit): ApiResult<T> {
     if (this is ApiResult.Success) {
         block(this.data)
     }
     return this
 }
 
-fun <T> ApiResult<T>.onFailure(block: (code: Int?, errorMessage: String?) -> Unit): ApiResult<T> {
+inline fun <T> ApiResult<T>.onFailure(block: (code: Int?, errorMessage: String?) -> Unit): ApiResult<T> {
     if (this is ApiResult.Failure) {
         block(this.code, this.errorMessage)
     }
     return this
 }
 
-fun <T> ApiResult<T>.onNetworkError(block: (exception: Exception) -> Unit): ApiResult<T> {
+inline fun <T> ApiResult<T>.onNetworkError(block: (exception: Exception) -> Unit): ApiResult<T> {
     if (this is ApiResult.NetworkError) {
         block(this.exception)
     }
     return this
 }
 
-fun <T> ApiResult<T>.onUnexpected(block: (t: Throwable) -> Unit): ApiResult<T> {
+inline fun <T> ApiResult<T>.onUnexpected(block: (t: Throwable) -> Unit): ApiResult<T> {
     if (this is ApiResult.Unexpected) {
         block(this.t)
     }
     return this
 }
 
-suspend fun <T> ApiResult<T>.suspendOnSuccess(block: suspend (T) -> Unit): ApiResult<T> {
-    if (this is ApiResult.Success) {
-        block(this.data)
-    }
-    return this
-}
-
-suspend fun <T> ApiResult<T>.suspendOnFailure(block: suspend (code: Int?, errorMessage: String?) -> Unit): ApiResult<T> {
-    if (this is ApiResult.Failure) {
-        block(this.code, this.errorMessage)
-    }
-    return this
-}
-
-suspend fun <T> ApiResult<T>.suspendOnNetworkError(block: suspend (exception: Exception) -> Unit): ApiResult<T> {
-    if (this is ApiResult.NetworkError) {
-        block(this.exception)
-    }
-    return this
-}
-
-suspend fun <T> ApiResult<T>.suspendOnUnexpected(block: suspend (t: Throwable) -> Unit): ApiResult<T> {
-    if (this is ApiResult.Unexpected) {
-        block(this.t)
-    }
-    return this
-}
-
-suspend fun <T, R> ApiResult<T>.map(block: suspend (T) -> R): ApiResult<R> {
+inline fun <T, R> ApiResult<T>.map(block: (T) -> R): ApiResult<R> {
     return when (this) {
         is ApiResult.Success -> ApiResult.Success(block(this.data))
         is ApiResult.Failure -> ApiResult.Failure(this.code, this.errorMessage)
@@ -67,6 +41,15 @@ suspend fun <T, R> ApiResult<T>.map(block: suspend (T) -> R): ApiResult<R> {
 
 fun <T> ApiResult<T>.getOrNull(): T? {
     return if (this is ApiResult.Success) data else null
+}
+
+fun <T> ApiResult<T>.getOrThrow(): T {
+    when (this) {
+        is ApiResult.Failure -> throw IllegalArgumentException(errorMessage)
+        is ApiResult.NetworkError -> throw exception
+        is ApiResult.Unexpected -> throw t
+        is ApiResult.Success -> return data
+    }
 }
 
 fun <T> Result<T>.toApiResult(): ApiResult<T> {
@@ -86,12 +69,21 @@ fun <T> ApiResult<T>.exceptionOrNull(): Throwable? {
     return exception
 }
 
-suspend fun <R, T> ApiResult<T>.suspendFold(
-    onSuccess: suspend (data: T) -> R,
-    onFailure: suspend (t: Throwable) -> R,
+inline fun <R, T> ApiResult<T>.fold(
+    onSuccess: (data: T) -> R,
+    onFailure: (t: Throwable) -> R,
 ): R {
     return when (val exception = exceptionOrNull()) {
         null -> onSuccess(this.getOrNull() as T)
         else -> onFailure(exception)
+    }
+}
+
+inline fun <T, R> ApiResult<T>.flatMap(block: (T) -> ApiResult<R>): ApiResult<R> {
+    return when (this) {
+        is ApiResult.Success -> block(this.data)
+        is ApiResult.Failure -> ApiResult.Failure(this.code, this.errorMessage)
+        is ApiResult.NetworkError -> ApiResult.NetworkError(this.exception)
+        is ApiResult.Unexpected -> ApiResult.Unexpected(this.t)
     }
 }

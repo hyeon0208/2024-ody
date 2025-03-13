@@ -7,11 +7,11 @@
 
         <variable
             name="address"
-            type="com.mulberry.ody.presentation.address.model.AddressUiModel" />
+            type="com.mulberry.ody.domain.model.Address" />
 
         <variable
             name="addressListener"
-            type="com.mulberry.ody.presentation.address.listener.AddressListener" />
+            type="com.mulberry.ody.presentation.feature.address.listener.AddressListener" />
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -19,7 +19,7 @@
         android:layout_height="wrap_content"
         android:background="@color/primary"
         android:paddingVertical="18dp"
-        app:onSingleClick="@{() -> addressListener.onClickAddressItem(address.id)}">
+        app:onSingleClick="@{() -> addressListener.onClickAddressItem(address)}">
 
         <ImageView
             android:id="@+id/iv_address_search_location"
