@@ -1,5 +1,6 @@
 package com.ody.meeting.service;
 
+import com.ody.common.aop.LeaderOnly;
 import com.ody.common.exception.OdyBadRequestException;
 import com.ody.common.exception.OdyNotFoundException;
 import com.ody.mate.domain.Mate;
@@ -125,6 +126,7 @@ public class MeetingService {
     }
 
     @Transactional
+    @LeaderOnly(key = "SCHEDULE_OVERDUE_MEETING", waitTime = 1, leaseTime = 3)
     @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")
     public void scheduleOverdueMeetings() {
         meetingRepository.updateAllByNotOverdueMeetings();

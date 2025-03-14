@@ -1,6 +1,7 @@
 package com.ody.notification.service;
 
 import com.ody.common.aop.DisabledDeletedFilter;
+import com.ody.common.aop.LeaderOnly;
 import com.ody.mate.domain.Mate;
 import com.ody.meeting.domain.Meeting;
 import com.ody.member.domain.DeviceToken;
@@ -81,6 +82,7 @@ public class NotificationService {
     }
 
     @Transactional
+    @LeaderOnly(key = "SCHEDULE_PENDING_MEETING", waitTime = 1L, leaseTime = 3L)
     @EventListener(ApplicationReadyEvent.class)
     public void schedulePendingNotification() {
         List<Notification> notifications = notificationRepository.findAllByTypeAndStatus(
