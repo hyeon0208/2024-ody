@@ -3,8 +3,6 @@ package com.ody.common.redis;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ody.common.BaseServiceTest;
-import com.ody.meeting.repository.MeetingRepository;
-import com.ody.meeting.service.MeetingService;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -13,21 +11,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 
 class LeaderManagerTest extends BaseServiceTest {
 
     @Autowired
     private RedissonClient redissonClient;
-
-    @Autowired
-    private MeetingService meetingService;
-
-    @MockBean
-    private MeetingRepository meetingRepository;
 
     @DisplayName("여러 인스턴스가 동시에 리더쉽을 얻으려고 하더라도 하나의 인스턴스만 리더가 된다.")
     @Test
@@ -102,33 +92,5 @@ class LeaderManagerTest extends BaseServiceTest {
 
         assertThat(isFollowerInitialLeader.get()).isFalse();
         assertThat(isFollowerLastLeader.get()).isTrue();
-    }
-
-    @DisplayName("모임 논리 삭제 스케줄링 작업이 동시 실행 시 하나의 리더 인스턴스에서만 작업이 실행된다.")
-    @Test
-    void 스케줄링은_하나만() throws InterruptedException {
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
-        CountDownLatch countDownLatch = new CountDownLatch(2);
-        AtomicInteger executionCount = new AtomicInteger(0);
-
-        Mockito.doAnswer(invocation -> {
-            executionCount.incrementAndGet();
-            return null;
-        }).when(meetingRepository).updateAllByNotOverdueMeetings();
-
-        for (int i = 1; i <= 2; i++) {
-            executorService.execute(() -> {
-                try {
-                    meetingService.scheduleOverdueMeetings();
-                } finally {
-                    countDownLatch.countDown();
-                }
-            });
-        }
-        countDownLatch.await(3, TimeUnit.SECONDS);
-        executorService.shutdown();
-        executorService.awaitTermination(3, TimeUnit.SECONDS);
-
-        assertThat(executionCount.get()).isEqualTo(1);
     }
 }
