@@ -13,116 +13,39 @@
 
 ## **기술 스택** ⚙️
 
-<img src="https://github.com/user-attachments/assets/1dfc2d88-b059-4d69-b38f-d7679d39befc" width="800" height="auto">
+> **Backend**
 
-> #### [기술 스택 선정 이유 보러가기](https://sly-face-106.notion.site/26c77083f28a4634a88ef3f4e9dbcea0?pvs=4)
+- Java 17
+- Gradle
+- Spring Boot
+- JPA
+- JWT
+- Thymeleaf
+- JUnit5
+- LogBack
+- Swagger
 
+<br>
+
+> **Infra**
+
+- AWS EC2
+- AWS RDS(MySQL)
+- ElastiCache(Redis)
+- GitHub Action
+- Docker
 
 <br>
 
 ## **ERD** 📈
 
-![image](https://github.com/user-attachments/assets/032e659e-bfc5-4477-b343-22ecc25df2b9)
-
+![ERD.png](ERD.png)
 
 <br>
 
 ## **아키텍처 구조** 🏗️
 
-![image](https://github.com/user-attachments/assets/aa50092b-1616-4ce0-a712-d21989914aea)
-
-<br>
-
-## 패키지 구조 🗂
-<details>
-<summary> 펼치기 </summary>
-<div markdown="1">
-
-```angular2html
-backend
-├── java
-│   └── com
-│       └── ody
-│           ├── auth
-│           │   ├── config
-│           │   ├── controller
-│           │   ├── domain
-│           │   ├── dto
-│           │   │   ├── request
-│           │   │   └── response
-│           │   ├── service
-│           │   └── jwtToken
-│           ├── common
-│           │   ├── annotation
-│           │   ├── aop
-│           │   ├── argumentresolver
-│           │   ├── config
-│           │   ├── domain
-│           │   ├── exception
-│           │   ├── filter
-│           │   ├── interceptor
-│           │   │   └── dto
-│           │   ├── mapper
-│           │   └── validator
-│           ├── eta
-│           │   ├── domain
-│           │   ├── dto
-│           │   │   ├── request
-│           │   │   └── response
-│           │   ├── repository
-│           │   └── service
-│           ├── mate
-│           │   ├── controller
-│           │   ├── domain
-│           │   ├── dto
-│           │   │   ├── request
-│           │   │   └── response
-│           │   ├── repository
-│           │   └── service
-│           ├── meeting
-│           │   ├── controller
-│           │   ├── domain
-│           │   ├── dto
-│           │   │   ├── request
-│           │   │   └── response
-│           │   ├── repository
-│           │   └── service
-│           ├── member
-│           │   ├── controller
-│           │   ├── domain
-│           │   ├── repository
-│           │   └── service
-│           ├── notification
-│           │   ├── config
-│           │   ├── domain
-│           │   │   └── message
-│           │   ├── dto
-│           │   │   └── response
-│           │   ├── repository
-│           │   └── service
-│           ├── route
-│           │   ├── config
-│           │   ├── controller
-│           │   ├── domain
-│           │   ├── dto
-│           │   ├── mapper
-│           │   ├── repository
-│           │   └── service
-│           ├── swagger
-│           │   ├── annotation
-│           │   └── config
-│           └── util
-└── resources
-    ├── db
-    │   └── migration
-    ├── static
-    │   ├── css
-    │   └── js
-    └── templates
-```
-
-</div>
-</details>
+![ARC.png](ARC.png)
 
 <br>
 
