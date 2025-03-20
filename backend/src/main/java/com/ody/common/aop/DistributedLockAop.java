@@ -1,6 +1,5 @@
 package com.ody.common.aop;
 
-import com.ody.common.exception.OdyException;
 import com.ody.common.exception.OdyServerErrorException;
 import com.ody.common.redis.RedissonLockManager;
 import lombok.RequiredArgsConstructor;
@@ -9,8 +8,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
@@ -40,10 +37,8 @@ public class DistributedLockAop {
     private Object proceedWithJoinPoint(ProceedingJoinPoint joinPoint) {
         try {
             return joinPoint.proceed();
-        } catch (OdyException exception) {
-            throw exception;
-        } catch (Throwable throwable) {
-            log.error("분산락 작업 처리중 에러 발생 : ", throwable);
+        } catch (Throwable exception) {
+            log.error("분산락 작업 처리중 에러 발생 : ", exception);
             throw new OdyServerErrorException("서버에 장애가 발생했습니다.");
         }
     }
@@ -57,7 +52,6 @@ public class DistributedLockAop {
             context.setVariable(signature.getParameterNames()[i], joinPoint.getArgs()[i]);
         }
 
-        return parser.parseExpression(key)
-                .getValue(context, String.class);
+        return parser.parseExpression(key).getValue(context, String.class);
     }
 }
