@@ -3,7 +3,6 @@ package com.ody.common.redis;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ody.common.BaseServiceTest;
-import com.ody.common.transaction.TransactionCallbackTemplate;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -20,9 +19,6 @@ class RedissonLeaderManagerTest extends BaseServiceTest {
     @Autowired
     private RedissonClient redissonClient;
 
-    @Autowired
-    private TransactionCallbackTemplate transactionCallbackTemplate;
-
     @DisplayName("여러 인스턴스가 동시에 리더쉽을 얻으려고 하더라도 하나의 인스턴스만 리더가 된다.")
     @Test
     void electLeader() throws InterruptedException {
@@ -35,7 +31,7 @@ class RedissonLeaderManagerTest extends BaseServiceTest {
         for (int i = 1; i <= threadCount; i++) {
             executorService.execute(() -> {
                 try {
-                    RedissonLeaderManager manager = new RedissonLeaderManager(redissonClient, transactionCallbackTemplate);
+                    RedissonLeaderManager manager = new RedissonLeaderManager(redissonClient);
                     if (manager.isLeader(mockLeaderOnly)) {
                         leaderCount.incrementAndGet();
                     }
@@ -63,7 +59,7 @@ class RedissonLeaderManagerTest extends BaseServiceTest {
 
         Thread leaderThread = new Thread(() -> {
             try {
-                RedissonLeaderManager initialLeader = new RedissonLeaderManager(redissonClient, transactionCallbackTemplate);
+                RedissonLeaderManager initialLeader = new RedissonLeaderManager(redissonClient);
                 initialLeader.isLeader(mockLeaderOnly); // 최초 리더로 선출
                 leaderLatch.countDown(); // 팔로워 스레드가 시작할 수 있도록 알림
                 followerLatch.await(); // 팔로워 스레드가 리더십 확인을 마칠 때까지 대기
@@ -77,7 +73,7 @@ class RedissonLeaderManagerTest extends BaseServiceTest {
         Thread followerThread = new Thread(() -> {
             try {
                 leaderLatch.await(); // 리더 스레드가 리더십을 획득할 때까지 대기
-                RedissonLeaderManager follower = new RedissonLeaderManager(redissonClient, transactionCallbackTemplate);
+                RedissonLeaderManager follower = new RedissonLeaderManager(redissonClient);
                 isFollowerInitialLeader.set(follower.isLeader(mockLeaderOnly));
                 followerLatch.countDown(); // 리더 스레드에게 리더십 확인을 마쳤다고 알림
                 completionLatch.await(); // 리더십 해제 및 테스트 완료를 기다림
