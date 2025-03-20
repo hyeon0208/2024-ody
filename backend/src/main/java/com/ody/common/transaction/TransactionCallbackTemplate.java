@@ -23,8 +23,6 @@ public class TransactionCallbackTemplate {
                 log.debug("트랜잭션 커밋 후 추가 작업 실행 완료");
             }
         });
-
-        // 트랜잭션 내에서 작업 실행
         return transactionTemplate.execute(transactionStatus -> action.get());
     }
 }
