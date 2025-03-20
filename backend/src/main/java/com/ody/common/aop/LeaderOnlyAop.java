@@ -1,5 +1,6 @@
 package com.ody.common.aop;
 
+import com.ody.common.exception.OdyException;
 import com.ody.common.exception.OdyServerErrorException;
 import com.ody.common.redis.RedissonLeaderManager;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,8 @@ public class LeaderOnlyAop {
         return redissonLeaderManager.executeIfLeader(() -> {
             try {
                 return joinPoint.proceed();
+            } catch (OdyException exception) {
+                throw exception;
             } catch (Throwable throwable) {
                 log.error("리더 작업 처리중 에러 발생 : ", throwable);
                 throw new OdyServerErrorException("서버에 장애가 발생했습니다.");
