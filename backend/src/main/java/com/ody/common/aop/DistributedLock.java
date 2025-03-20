@@ -14,9 +14,9 @@ public @interface DistributedLock {
     @NotNull
     String key();
 
-    long waitTime() default 3L; // Lock 흭득 대기 시간
+    long waitTime() default 5L;
 
-    long leaseTime() default 5L; // Lock 보유 시간 (부하 분산 서버 다운 문제 해결을 위한 시간)
+    long leaseTime() default 3L;
 
     TimeUnit timeUnit() default TimeUnit.SECONDS;
 }
