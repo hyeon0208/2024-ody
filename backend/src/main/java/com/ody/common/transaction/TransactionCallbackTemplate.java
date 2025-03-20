@@ -15,12 +15,12 @@ public class TransactionCallbackTemplate {
 
     private final TransactionTemplate transactionTemplate;
 
-    public <T> T executeWithAfterCommitAction(Supplier<T> action, Runnable afterCommitAction) {
+    public <T> T executeWithAfterCompletionAction(Supplier<T> action, Runnable afterCommitAction) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCompletion(int status) {
                 afterCommitAction.run();
-                log.debug("트랜잭션 커밋 후 추가 작업 실행 완료");
+                log.debug("트랜잭션 완료 후 추가 작업 실행 완료");
             }
         });
         return transactionTemplate.execute(transactionStatus -> action.get());
