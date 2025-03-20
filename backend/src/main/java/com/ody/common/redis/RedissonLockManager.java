@@ -21,7 +21,7 @@ public class RedissonLockManager {
     public <T> T lock(Supplier<T> supplier, String lockName, DistributedLock distributedLock) {
         RLock rLock = redissonClient.getLock(lockName); // lockName으로 분산 락 객체를 생성
         acquireLock(rLock, lockName, distributedLock);
-        return transactionCallbackTemplate.executeWithAfterCommitAction(
+        return transactionCallbackTemplate.executeWithAfterCompletionAction(
                 supplier,
                 () -> releaseLock(rLock, lockName)
         );
