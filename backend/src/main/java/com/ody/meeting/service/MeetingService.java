@@ -1,5 +1,6 @@
 package com.ody.meeting.service;
 
+import com.ody.common.aop.DistributedLock;
 import com.ody.common.aop.LeaderOnly;
 import com.ody.common.exception.OdyBadRequestException;
 import com.ody.common.exception.OdyNotFoundException;
@@ -117,6 +118,7 @@ public class MeetingService {
     }
 
     @Transactional
+    @DistributedLock(key = "'MATE_SAVE'")
     public MateSaveResponseV2 saveMateAndSendNotifications(MateSaveRequestV2 mateSaveRequest, Member member) {
         Meeting meeting = findByInviteCode(mateSaveRequest.inviteCode());
         if (meeting.isEnd()) {

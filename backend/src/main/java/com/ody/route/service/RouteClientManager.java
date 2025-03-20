@@ -1,12 +1,9 @@
 package com.ody.route.service;
 
 import com.ody.common.exception.OdyServerErrorException;
-import com.ody.route.domain.ApiCall;
-import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -16,10 +13,11 @@ public class RouteClientManager {
 
     private final List<RouteClient> routeClients;
     private final ApiCallService apiCallService;
+    private final RouteClientCircuitBreaker routeClientCircuitBreaker;
 
     public List<RouteClient> getAvailableClients() {
         List<RouteClient> availableClients = routeClients.stream()
-                .filter(this::isEnabled)
+                .filter(client -> isAvailable(client) && isEnabled(client))
                 .toList();
 
         if (availableClients.isEmpty()) {
@@ -29,13 +27,8 @@ public class RouteClientManager {
         return availableClients;
     }
 
-    @Scheduled(cron = "0 55 23 * * *", zone = "Asia/Seoul")
-    public void initializeClientApiCalls() {
-        LocalDate nextDay = LocalDate.now().plusDays(1);
-        routeClients.stream()
-                .map(client -> apiCallService.findOrSaveTodayApiCallByClientType(client.getClientType()))
-                .map(apiCall -> new ApiCall(apiCall.getClientType(), 0, nextDay, apiCall.getEnabled()))
-                .forEach(apiCallService::save);
+    private boolean isAvailable(RouteClient routeClient) {
+        return !routeClientCircuitBreaker.isBlocked(routeClient);
     }
 
     private boolean isEnabled(RouteClient routeClient) {

@@ -11,6 +11,7 @@ import com.ody.notification.service.FcmEventListener;
 import com.ody.route.domain.ApiCall;
 import com.ody.route.domain.ClientType;
 import com.ody.route.repository.ApiCallRepository;
+import com.ody.route.service.RouteClientCircuitBreaker;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,9 @@ public abstract class BaseServiceTest {
 
     @MockBean
     protected FcmEventListener fcmEventListener;
+
+    @MockBean
+    protected RouteClientCircuitBreaker routeClientCircuitBreaker;
 
     @Autowired
     protected ApplicationEvents applicationEvents;
