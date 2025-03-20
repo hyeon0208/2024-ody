@@ -65,4 +65,4 @@
 <br>
 
 ## 백엔드 🛠️
-[백엔드 팀 소개 보러가기](https://github.com/woowacourse-teams/2024-ody/blob/develop/backend/README.md)
+[백엔드 팀 소개 보러가기](https://github.com/hyeon0208/2024-ody/blob/develop/backend/README.md)
