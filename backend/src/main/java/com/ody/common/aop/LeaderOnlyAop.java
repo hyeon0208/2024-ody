@@ -1,8 +1,7 @@
 package com.ody.common.aop;
 
-import com.ody.common.exception.OdyException;
 import com.ody.common.exception.OdyServerErrorException;
-import com.ody.common.redis.LeaderManager;
+import com.ody.common.redis.RedissonLeaderManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -16,17 +15,14 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class LeaderOnlyAop {
 
-
-    private final LeaderManager leaderManager;
+    private final RedissonLeaderManager redissonLeaderManager;
 
     @Around("@annotation(leaderOnly)")
     public Object executeIfLeader(ProceedingJoinPoint joinPoint, LeaderOnly leaderOnly) {
 
-        return leaderManager.executeIfLeader(() -> {
+        return redissonLeaderManager.executeIfLeader(() -> {
             try {
                 return joinPoint.proceed();
-            } catch (OdyException exception) {
-                throw exception;
             } catch (Throwable throwable) {
                 log.error("리더 작업 처리중 에러 발생 : ", throwable);
                 throw new OdyServerErrorException("서버에 장애가 발생했습니다.");
