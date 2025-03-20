@@ -20,7 +20,7 @@ public class RedissonLeaderManager {
 
     public <T> T executeIfLeader(Supplier<T> supplier, LeaderOnly leaderOnly) {
         if (!isLeader(leaderOnly)) {
-            log.info("서버 인스턴스 {}는 리더가 아니므로 작업을 실행하지 않습니다.", serverInstanceId);
+            log.debug("서버 인스턴스 {}는 리더가 아니므로 작업을 실행하지 않습니다.", serverInstanceId);
             return null;
         }
         return supplier.get();
@@ -29,7 +29,7 @@ public class RedissonLeaderManager {
     public boolean isLeader(LeaderOnly leaderOnly) {
         RLock lock = redissonClient.getLock(leaderOnly.key());
         if (lock.isHeldByCurrentThread()) {
-            log.info("현재 인스턴스가 락 보유 중: {}", leaderOnly.key());
+            log.debug("현재 인스턴스가 락 보유 중: {}", leaderOnly.key());
             return true;
         }
         return tryUpdateLeader(lock, leaderOnly);
@@ -39,7 +39,7 @@ public class RedissonLeaderManager {
         try {
             boolean acquired = lock.tryLock(leaderOnly.waitTime(), leaderOnly.leaseTime(), leaderOnly.timeUnit());
             if (acquired) {
-                log.info("서버 인스턴스 {}가 리더로 선출되었습니다.", serverInstanceId);
+                log.debug("서버 인스턴스 {}가 리더로 선출되었습니다.", serverInstanceId);
                 return true;
             }
             return false;
@@ -54,7 +54,7 @@ public class RedissonLeaderManager {
         if (lock.isHeldByCurrentThread()) {
             try {
                 lock.unlock();
-                log.info("서버 인스턴스 {}가 리더 역할을 해제했습니다.", serverInstanceId);
+                log.debug("서버 인스턴스 {}가 리더 역할을 해제했습니다.", serverInstanceId);
             } catch (Exception exception) {
                 log.error("리더십 해제 중 오류 발생", exception);
                 throw new OdyServerErrorException("서버에 장애가 발생했습니다.");
