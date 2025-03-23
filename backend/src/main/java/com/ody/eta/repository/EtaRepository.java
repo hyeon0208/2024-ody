@@ -12,7 +12,7 @@ public interface EtaRepository extends JpaRepository<Eta, Long> {
 
     @Query("""
             select e from Eta e
-            join Mate ma on e.mate.id = ma.id
+            join fetch Mate ma on e.mate.id = ma.id
             join Meeting  me on e.mate.meeting.id = me.id
             where me.id = :meetingId
             """)

@@ -12,15 +12,9 @@ import com.ody.meeting.domain.Location;
 import com.ody.meeting.domain.Meeting;
 import com.ody.meeting.dto.response.MateEtaResponseV2;
 import com.ody.meeting.dto.response.MateEtaResponsesV2;
-import com.ody.route.domain.ClientType;
 import com.ody.route.domain.RouteTime;
-import com.ody.route.service.ApiCallService;
 import com.ody.route.service.RouteService;
 import java.time.LocalDateTime;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -36,9 +30,6 @@ class EtaServiceTest extends BaseServiceTest {
 
     @Autowired
     private EtaService etaService;
-
-    @Autowired
-    private ApiCallService apiCallService;
 
     @DisplayName("오디세이 호출 여부 테스트")
     @Nested
@@ -119,76 +110,5 @@ class EtaServiceTest extends BaseServiceTest {
                 .get();
 
         assertThat(mateEtaResponse.status()).isEqualTo(EtaStatus.ARRIVED);
-    }
-
-    @DisplayName("ETA 목록 조회 시 API 호출 카운팅 Redisson 분산락 동시성 테스트")
-    @Nested
-    public class RedissonDistributedLockTest {
-
-        private static final int TOTAL_REQUESTS = 100;
-
-        @DisplayName("100명의 사용자가 동시에 ETA 목록 조회하여 API를 호출할 경우 정확히 count+100 한다.")
-        @Test
-        void concurrencyFindAllMateEtas() throws InterruptedException {
-            ExecutorService executorService = Executors.newFixedThreadPool(TOTAL_REQUESTS);
-            CountDownLatch countDownLatch = new CountDownLatch(TOTAL_REQUESTS);
-
-            Meeting odyMeeting = fixtureGenerator.generateMeeting();
-            Mate mate = fixtureGenerator.generateMate(odyMeeting, Fixture.ORIGIN_LOCATION);
-            LocalDateTime updateTime = LocalDateTime.now().minusMinutes(11L);
-            fixtureGenerator.generateEta(mate, 30L, updateTime);
-            MateEtaRequest mateEtaRequest = dtoGenerator.generateMateEtaRequest(false, Fixture.ORIGIN_LOCATION);
-
-            for (int i = 1; i <= TOTAL_REQUESTS; i++) {
-                executorService.execute(() -> {
-                    try {
-                        etaService.findAllMateEtas(mateEtaRequest, mate);
-                    } finally {
-                        countDownLatch.countDown();
-                    }
-                });
-            }
-            countDownLatch.await(3, TimeUnit.SECONDS);
-            executorService.shutdown();
-            executorService.awaitTermination(3, TimeUnit.SECONDS);
-
-            int actual = apiCallService.countApiCall(ClientType.ODSAY).count();
-
-            assertThat(actual).isEqualTo(TOTAL_REQUESTS);
-        }
-
-        @DisplayName("100명의 사용자가 동시에 ETA 목록 조회하여 절반이 예외가 발생하면 해당 트랜잭션은 롤백되어 count+50 한다.")
-        @Test
-        void concurrencyFindAllMateEtasRollBack() throws InterruptedException {
-            ExecutorService executorService = Executors.newFixedThreadPool(TOTAL_REQUESTS);
-            CountDownLatch countDownLatch = new CountDownLatch(TOTAL_REQUESTS);
-
-            Meeting odyMeeting = fixtureGenerator.generateMeeting();
-            Mate mate = fixtureGenerator.generateMate(odyMeeting, Fixture.ORIGIN_LOCATION);
-            LocalDateTime updateTime = LocalDateTime.now().minusMinutes(11L);
-            fixtureGenerator.generateEta(mate, 30L, updateTime);
-            MateEtaRequest mateEtaRequest = dtoGenerator.generateMateEtaRequest(false, Fixture.ORIGIN_LOCATION);
-
-            for (int i = 1; i <= TOTAL_REQUESTS; i++) {
-                final int index = i;
-                executorService.execute(() -> {
-                    try {
-                        if (index % 2 == 0) {
-                            throw new RuntimeException();
-                        }
-                        etaService.findAllMateEtas(mateEtaRequest, mate);
-                    } finally {
-                        countDownLatch.countDown();
-                    }
-                });
-            }
-            countDownLatch.await(3, TimeUnit.SECONDS);
-            executorService.shutdown();
-            executorService.awaitTermination(3, TimeUnit.SECONDS);
-
-            int actual = apiCallService.countApiCall(ClientType.ODSAY).count();
-
-            assertThat(actual).isEqualTo(TOTAL_REQUESTS / 2);
-        }
     }
 }

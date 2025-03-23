@@ -1,19 +1,17 @@
 package com.ody.common;
 
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doNothing;
 
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.ody.auth.service.apple.AppleRevokeTokenClient;
 import com.ody.auth.service.kakao.KakaoAuthUnlinkClient;
 import com.ody.notification.config.FcmConfig;
 import com.ody.notification.service.FcmEventListener;
-import com.ody.route.domain.ApiCall;
-import com.ody.route.domain.ClientType;
-import com.ody.route.repository.ApiCallRepository;
+import com.ody.route.repository.RouteClientRedisTemplate;
 import com.ody.route.service.RouteClientCircuitBreaker;
-import java.time.LocalDate;
+import com.ody.route.service.RouteClientManager;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -30,6 +28,9 @@ import org.springframework.test.context.event.RecordApplicationEvents;
 @SpringBootTest(webEnvironment = WebEnvironment.NONE)
 public abstract class BaseServiceTest {
 
+    @Autowired
+    private DatabaseCleaner databaseCleaner;
+
     @MockBean
     private FcmConfig fcmConfig;
 
@@ -42,19 +43,8 @@ public abstract class BaseServiceTest {
     @MockBean
     protected RouteClientCircuitBreaker routeClientCircuitBreaker;
 
-    @Autowired
-    protected ApplicationEvents applicationEvents;
-
-    @Autowired
-    private DatabaseCleaner databaseCleaner;
-
-    @Autowired
-    protected FixtureGenerator fixtureGenerator;
-
-    @Autowired
-    private ApiCallRepository apiCallRepository;
-
-    protected DtoGenerator dtoGenerator = new DtoGenerator();
+    @SpyBean
+    protected RouteClientManager routeClientManager;
 
     @SpyBean
     protected KakaoAuthUnlinkClient kakaoAuthUnlinkClient;
@@ -62,15 +52,23 @@ public abstract class BaseServiceTest {
     @SpyBean
     protected AppleRevokeTokenClient appleRevokeTokenClient;
 
+    @Autowired
+    protected FixtureGenerator fixtureGenerator;
+
+    @Autowired
+    protected RouteClientRedisTemplate redisTemplate;
+
+    @Autowired
+    protected ApplicationEvents applicationEvents;
+
+    protected DtoGenerator dtoGenerator = new DtoGenerator();
+
     @BeforeEach
     void setUp() {
-        doNothing().when(kakaoAuthUnlinkClient).unlink(anyString());
-        doNothing().when(appleRevokeTokenClient).unlink(anyString());
-
         databaseCleaner.cleanUp();
-        applicationEvents.clear();
-        apiCallRepository.save(new ApiCall(ClientType.ODSAY, 0, LocalDate.now()));
-        apiCallRepository.save(new ApiCall(ClientType.GOOGLE, 0, LocalDate.now()));
+        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushAll();
+        Mockito.doNothing().when(kakaoAuthUnlinkClient).unlink(anyString());
+        Mockito.doNothing().when(appleRevokeTokenClient).unlink(anyString());
     }
 }
 

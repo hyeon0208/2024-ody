@@ -19,11 +19,13 @@ import com.ody.member.domain.Member;
 import com.ody.notification.domain.FcmTopic;
 import com.ody.notification.service.event.NudgeEvent;
 import com.ody.notification.service.event.UnSubscribeEvent;
+import com.ody.route.service.StubOdsayRouteClient;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 
 class MateServiceTest extends BaseServiceTest {
@@ -183,6 +185,7 @@ class MateServiceTest extends BaseServiceTest {
 
             MateSaveRequestV2 mateSaveRequest = dtoGenerator.generateMateSaveRequest(meeting);
 
+            Mockito.when(routeClientManager.getAvailableClients()).thenReturn(List.of(new StubOdsayRouteClient()));
             MateSaveResponseV2 mateSaveResponse = mateService.saveAndSendNotifications(
                     mateSaveRequest,
                     member2,

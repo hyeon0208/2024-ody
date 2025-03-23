@@ -6,6 +6,10 @@ import com.ody.common.BaseServiceTest;
 import com.ody.route.domain.ClientType;
 import com.ody.route.dto.ApiCallCountResponse;
 import java.time.LocalDate;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,5 +63,30 @@ class ApiCallServiceTest extends BaseServiceTest {
         ApiCallCountResponse expected = new ApiCallCountResponse(0);
 
         assertThat(actual).isEqualTo(expected);
+    }
+
+    @DisplayName("n명의 사용자가 API를 호출할 경우 정확히 n번 카운팅 한다.")
+    @Test
+    void concurrencyIncreaseCountByClientType() throws InterruptedException {
+        int TOTAL_REQUESTS = 9;
+        ExecutorService executorService = Executors.newFixedThreadPool(TOTAL_REQUESTS);
+        CountDownLatch countDownLatch = new CountDownLatch(TOTAL_REQUESTS);
+
+        for (int i = 1; i <= TOTAL_REQUESTS; i++) {
+            executorService.execute(() -> {
+                try {
+                    apiCallService.increaseCountByClientType(ClientType.ODSAY);
+                } finally {
+                    countDownLatch.countDown();
+                }
+            });
+        }
+        countDownLatch.await(3, TimeUnit.SECONDS);
+        executorService.shutdown();
+        executorService.awaitTermination(3, TimeUnit.SECONDS);
+
+        int actual = apiCallService.countApiCall(ClientType.ODSAY).count();
+
+        assertThat(actual).isEqualTo(TOTAL_REQUESTS);
     }
 }

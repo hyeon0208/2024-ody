@@ -36,7 +36,6 @@ public class EtaService {
     }
 
     @Transactional
-    @DistributedLock(key = "'FIND_ETAS'")
     public MateEtaResponsesV2 findAllMateEtas(MateEtaRequest mateEtaRequest, Mate mate) {
         Meeting meeting = mate.getMeeting();
         Eta mateEta = findByMateId(mate.getId());
