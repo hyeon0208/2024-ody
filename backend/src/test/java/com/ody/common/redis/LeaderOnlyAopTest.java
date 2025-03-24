@@ -3,6 +3,7 @@ package com.ody.common.redis;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ody.common.BaseServiceTest;
+import com.ody.common.aop.LeaderOnlyAop;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -14,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 
-class RedissonLeaderManagerTest extends BaseServiceTest {
+class LeaderOnlyAopTest extends BaseServiceTest {
 
     @Autowired
     private RedissonClient redissonClient;
@@ -31,7 +32,7 @@ class RedissonLeaderManagerTest extends BaseServiceTest {
         for (int i = 1; i <= threadCount; i++) {
             executorService.execute(() -> {
                 try {
-                    RedissonLeaderManager manager = new RedissonLeaderManager(redissonClient);
+                    LeaderOnlyAop manager = new LeaderOnlyAop(redissonClient);
                     if (manager.isLeader(mockLeaderOnly)) {
                         leaderCount.incrementAndGet();
                     }
@@ -59,7 +60,7 @@ class RedissonLeaderManagerTest extends BaseServiceTest {
 
         Thread leaderThread = new Thread(() -> {
             try {
-                RedissonLeaderManager initialLeader = new RedissonLeaderManager(redissonClient);
+                LeaderOnlyAop initialLeader = new LeaderOnlyAop(redissonClient);
                 initialLeader.isLeader(mockLeaderOnly); // 최초 리더로 선출
                 leaderLatch.countDown(); // 팔로워 스레드가 시작할 수 있도록 알림
                 followerLatch.await(); // 팔로워 스레드가 리더십 확인을 마칠 때까지 대기
@@ -73,7 +74,7 @@ class RedissonLeaderManagerTest extends BaseServiceTest {
         Thread followerThread = new Thread(() -> {
             try {
                 leaderLatch.await(); // 리더 스레드가 리더십을 획득할 때까지 대기
-                RedissonLeaderManager follower = new RedissonLeaderManager(redissonClient);
+                LeaderOnlyAop follower = new LeaderOnlyAop(redissonClient);
                 isFollowerInitialLeader.set(follower.isLeader(mockLeaderOnly));
                 followerLatch.countDown(); // 리더 스레드에게 리더십 확인을 마쳤다고 알림
                 completionLatch.await(); // 리더십 해제 및 테스트 완료를 기다림
