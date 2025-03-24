@@ -68,7 +68,7 @@ class ApiCallServiceTest extends BaseServiceTest {
     @DisplayName("n명의 사용자가 API를 호출할 경우 정확히 n번 카운팅 한다.")
     @Test
     void concurrencyIncreaseCountByClientType() throws InterruptedException {
-        int TOTAL_REQUESTS = 9;
+        int TOTAL_REQUESTS = 100;
         ExecutorService executorService = Executors.newFixedThreadPool(TOTAL_REQUESTS);
         CountDownLatch countDownLatch = new CountDownLatch(TOTAL_REQUESTS);
 

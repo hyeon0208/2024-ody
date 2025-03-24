@@ -12,6 +12,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -38,7 +39,7 @@ public class ApiCallService {
         return new ApiCallCountResponse(totalCount);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @DistributedLock(key = "'API_CALL_' + #clientType.name()")
     public void increaseCountByClientType(ClientType clientType) {
         ApiCall apiCall = findOrSaveTodayApiCallByClientType(clientType);
