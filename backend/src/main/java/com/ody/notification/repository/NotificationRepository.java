@@ -14,8 +14,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Query("""
             select noti
             from Notification noti
-            left join fetch Mate m on noti.mate = m
-            left join Meeting meet on m.meeting = meet
+            left join fetch noti.mate m
+            left join m.meeting meet
             where meet.id = :meetingId and noti.sendAt < :dateTime and noti.status != "DISMISSED"
             order by noti.sendAt asc
             """)
@@ -27,23 +27,39 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Query("""
             select noti
             from Notification noti
-            join fetch Mate mate on noti.mate.id = mate.id
-            join fetch Meeting meet on mate.meeting.id = meet.id
-            join fetch Member member on mate.member.id = member.id
+            join fetch noti.mate m
+            join fetch m.meeting
             where noti.type = :type and noti.status = :status
             """)
     List<Notification> findAllByTypeAndStatus(NotificationType type, NotificationStatus status);
 
     @Query("""
+            select noti from Notification noti
+            join fetch noti.mate m
+            join fetch m.meeting
+            where noti.type = :type and noti.status = :status and noti.sendAt > :dateTime
+        """)
+    List<Notification> findNotPassedNotificationsByTypeAndStatusAndDateTime(
+            NotificationType type,
+            NotificationStatus status,
+            LocalDateTime dateTime
+    );
+
+    @Query("""
             select noti
             from Notification noti
-            join fetch Mate mate on noti.mate.id = mate.id and mate.meeting.id = :meetingId
-            join fetch Member member on mate.member.id = member.id
-            where noti.type = :type
+            join fetch noti.mate mate
+            join fetch mate.member
+            where mate.meeting.id = :meetingId
+            and noti.type = :type
             """)
     List<Notification> findAllMeetingIdAndType(Long meetingId, NotificationType type);
 
     @Modifying(clearAutomatically = true)
     @Query("update Notification n set n.status = 'DISMISSED' where n.mate.id = :mateId and n.sendAt > :dateTime")
     void updateAllStatusToDismissedByMateIdAndSendAtAfterDateTime(long mateId, LocalDateTime dateTime);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Notification n SET n.status = 'DISMISSED' WHERE n.type = 'DEPARTURE_REMINDER' AND n.status = 'PENDING' AND n.sendAt <= :dateTime")
+    int updateAllPassedDepartureReminderStatusToDismissedByDateTime(LocalDateTime dateTime);
 }

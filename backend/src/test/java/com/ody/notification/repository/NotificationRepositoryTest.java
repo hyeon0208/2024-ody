@@ -167,4 +167,29 @@ class NotificationRepositoryTest extends BaseRepositoryTest {
                 () -> assertThat(notifications.get(0).getId()).isEqualTo(notification1.getId())
         );
     }
+
+    @DisplayName("알림 전송 시간이 <= datetime인 출발 알림의 상태를 DISMISSED로 변경한다")
+    @Test
+    void updateAllStatusPendingToDismissedByMateId() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime passedTime = now.plusSeconds(1);
+        LocalDateTime notPassedTime = now.minusSeconds(1);
+
+        Mate mate = fixtureGenerator.generateMate();
+        fixtureGenerator.generateNotification(
+                mate,
+                passedTime,
+                NotificationType.DEPARTURE_REMINDER,
+                NotificationStatus.PENDING
+        );
+        fixtureGenerator.generateNotification(
+                mate,
+                notPassedTime,
+                NotificationType.DEPARTURE_REMINDER,
+                NotificationStatus.PENDING
+        );
+
+        int updateCount = notificationRepository.updateAllPassedDepartureReminderStatusToDismissedByDateTime(LocalDateTime.now());
+        assertThat(updateCount).isEqualTo(1);
+    }
 }

@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -85,12 +86,21 @@ public class NotificationService {
     @LeaderOnly(key = "SCHEDULE_PENDING_MEETING", waitTime = 1L, leaseTime = 3L)
     @EventListener(ApplicationReadyEvent.class)
     public void schedulePendingNotification() {
-        List<Notification> notifications = notificationRepository.findAllByTypeAndStatus(
+        List<Notification> notifications = notificationRepository.findNotPassedNotificationsByTypeAndStatusAndDateTime(
                 NotificationType.DEPARTURE_REMINDER,
-                NotificationStatus.PENDING
+                NotificationStatus.PENDING,
+                LocalDateTime.now()
         );
         notifications.forEach(this::scheduleNotification);
         log.info("애플리케이션 시작 - PENDING 상태 출발 알림 {}개 스케줄링", notifications.size());
+    }
+
+    @Transactional
+    @LeaderOnly(key = "SCHEDULE_UPDATE_ALL_DISMISSED", waitTime = 1L, leaseTime = 3L)
+    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
+    public void updateAllPassedDepartureReminderStatusToDismissed() {
+        int updateCount = notificationRepository.updateAllPassedDepartureReminderStatusToDismissedByDateTime(LocalDateTime.now());
+        log.info("전송 시간이 지난 PENDING 상태 출발 알림 {}개 DISMISSED로 상태 변경", updateCount);
     }
 
     @DisabledDeletedFilter

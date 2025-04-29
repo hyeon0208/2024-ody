@@ -45,15 +45,26 @@ class NotificationServiceTest extends BaseServiceTest {
     @Autowired
     private MemberService memberService;
 
-    @DisplayName("PENDING 상태의 알림들을 TaskScheduler로 스케줄링 한다.")
+    @DisplayName("전송 시간이 지나지 않은 PENDING 상태의 출발 시간 알림들을 TaskScheduler로 스케줄링 한다.")
     @Test
     void schedulePendingNotification() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime passedTime = now.plusSeconds(1);
+        LocalDateTime notPassedTime = now.minusSeconds(1);
+
         Mate mate = fixtureGenerator.generateMate();
-        fixtureGenerator.generateNotification(mate, NotificationType.DEPARTURE_REMINDER, NotificationStatus.PENDING);
+        Notification notPassedNotification = fixtureGenerator.generateNotification(
+                mate,
+                notPassedTime,
+                NotificationType.DEPARTURE_REMINDER,
+                NotificationStatus.PENDING
+        );
+        fixtureGenerator.generateNotification(mate, passedTime, NotificationType.DEPARTURE_REMINDER, NotificationStatus.PENDING);
         fixtureGenerator.generateNotification(mate, NotificationType.DEPARTURE_REMINDER, NotificationStatus.DONE);
 
         notificationService.schedulePendingNotification();
 
+        assertThat(notPassedNotification.getSendAt()).isEqualTo(notPassedTime);
         BDDMockito.verify(taskScheduler, Mockito.times(1))
                 .schedule(any(Runnable.class), any(Instant.class));
     }
