@@ -23,7 +23,7 @@ import org.springframework.web.client.RestClient;
 @EnableConfigurationProperties(RouteClientProperties.class)
 public class RouteConfig {
 
-    private static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofSeconds(60);
+    private static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofSeconds(3);
     private static final Duration DEFAULT_READ_TIMEOUT = Duration.ofSeconds(30);
 
     private final RouteClientProperties properties;
