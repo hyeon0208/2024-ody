@@ -23,7 +23,10 @@ public class RouteClientCircuitBreaker {
     public void recordFailCountInMinutes(RouteClient routeClient) {
         String failClientKey = RouteClientKey.getFailKey(routeClient);
         int failCount = redisTemplate.increment(failClientKey);
-        redisTemplate.expire(failClientKey, FAIL_MINUTES_TTL);
+        if (Boolean.FALSE.equals(redisTemplate.hasKey(failClientKey))) {
+            redisTemplate.expire(failClientKey, FAIL_MINUTES_TTL);
+            log.warn("{} 첫 요청 실패, {}분 TTL 시작", failClientKey, FAIL_MINUTES_TTL);
+        }
         log.warn("{} 요청 실패 횟수 : {}", failClientKey, failCount);
     }
 

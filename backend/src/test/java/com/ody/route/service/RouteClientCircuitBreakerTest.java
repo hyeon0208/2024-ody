@@ -21,7 +21,7 @@ class RouteClientCircuitBreakerTest extends BaseRedisTest {
     @Qualifier("odsay")
     private RouteClient routeClient;
 
-    @DisplayName("실패 횟수를 기록하고 TTL을 31분으로 설정한다.")
+    @DisplayName("실패 횟수를 기록하고 TTL을 30분으로 설정한다.")
     @Test
     void recordFailCountInMinutes() {
         circuitBreaker.recordFailCountInMinutes(routeClient);
@@ -30,10 +30,9 @@ class RouteClientCircuitBreakerTest extends BaseRedisTest {
         int failureCount = redisTemplate.getKeyCount(failClientKey);
         Long ttlMinutes = redisTemplate.getExpire(failClientKey, TimeUnit.MINUTES);
 
-        // 지연 시간 때문에 TTL을 범위로 테스트
         assertAll(
                 () -> assertThat(failureCount).isEqualTo(1),
-                () -> assertThat(ttlMinutes).isBetween(30L, 31L)
+                () -> assertThat(ttlMinutes).isEqualTo(ttlMinutes)
         );
     }
 
