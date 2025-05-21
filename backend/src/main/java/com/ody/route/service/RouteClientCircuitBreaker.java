@@ -15,7 +15,7 @@ public class RouteClientCircuitBreaker {
 
     private static final int MAX_FAIL_COUNT = 3;
     private static final String BLOCK = "1";
-    public static final Duration FAIL_MINUTES_TTL = Duration.ofMinutes(31);
+    public static final Duration FAIL_MINUTES_TTL = Duration.ofMinutes(30);
     public static final Duration BLOCK_HOUR_TTL = Duration.ofHours(3);
 
     private final RouteClientRedisTemplate redisTemplate;
