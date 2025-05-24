@@ -39,7 +39,6 @@ public class ApiCallService {
         return new ApiCallCountResponse(totalCount);
     }
 
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     @DistributedLock(key = "'API_CALL_' + #clientType.name()")
     public void increaseCountByClientType(ClientType clientType) {
         ApiCall apiCall = findOrSaveTodayApiCallByClientType(clientType);
